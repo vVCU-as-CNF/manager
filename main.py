@@ -1,5 +1,11 @@
-from nbi_interactions import *
 from time import sleep
+from kubernetes import client, config
+
+from nbi_interactions import *
+from k8s_interactions import *
+
+
+
 
 #
 # STATIC VARIABLES
@@ -12,13 +18,13 @@ NS_PACKAGE_NAME = "vvcu-as-cnf_ns"
 
 # creating a new NS instance
 INSTANCE_NAME = "nbi-test" # instance name
-NSD_NAME = "vvcu-as-cnf_ns" # descriptor name
+NSD_NAME = "vvcu-as-acnf_ns" # descriptor name
 
 #
 # MAIN
 #
 def main():
-    vim_acc = VIM_ACCOUNT_1
+    vim_acc = VIM_ACCOUNT_2
     
     getToken()
     
@@ -27,19 +33,26 @@ def main():
 
     instance_id = createNSInstance(vim_accounts[vim_acc], ns_packages[NSD_NAME], INSTANCE_NAME)
     
-    waitForState(INSTANCE_NAME, "NOT_INSTANTIATED")
-    instantiateNSInstance(instance_id, vim_accounts[vim_acc], INSTANCE_NAME)
-    
-    waitForState(INSTANCE_NAME, "READY")
-    terminateNSInstance(instance_id)
 
     waitForState(INSTANCE_NAME, "NOT_INSTANTIATED")
-    deleteNSInstance(instance_id)
+    instantiateNSInstance(instance_id, vim_accounts[vim_acc], INSTANCE_NAME)
+
+    waitForState(INSTANCE_NAME, "READY")
+    getNSInstanceInfo(instance_id)
+
+    sleep(10)
+    getNSInstanceInfo(instance_id)
+    
+    # waitForState(INSTANCE_NAME, "READY")
+    # terminateNSInstance(instance_id)
+
+    # waitForState(INSTANCE_NAME, "NOT_INSTANTIATED")
+    # deleteNSInstance(instance_id)
 
     deleteToken()
 
 def waitForState(instance_name, state):
-    """Waits for an instance to reach a certain state"""
+    """Waits for an instance to reach a certain state in OSM"""
     instances = listNSInstances()
     
     while(instances[instance_name]["state"] != state):
