@@ -2,6 +2,8 @@ import yaml
 import requests
 import urllib3
 
+from time import sleep
+
 #
 # STATIC VARIABLES
 #
@@ -10,13 +12,11 @@ BASE_URL = "https://10.255.28.79:9999/osm/"
 
 session = requests.Session()
 session.verify = False
-
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 #
 # TOKENS
 #
-
 def getToken():
     """Get token from OSM"""
     url = BASE_URL + "admin/v1/tokens"
@@ -258,3 +258,21 @@ def deleteNSInstance(instance_id):
     print("Deleted NS instance: ")
     print("  id - " + instance_id)
 
+def waitForNSState(instance_name, state):
+    """Waits for an instance to reach a certain state in OSM"""
+    instances = listNSInstances()
+    
+    while(instances[instance_name]["state"] != state):
+        print("--------------------")
+        print("Waiting... " + instance_name + " is " + instances[instance_name]["state"] + ", need " + state)
+
+        sleep(3)
+        instances = listNSInstances()
+
+        if instances[instance_name]["state"] == "BROKEN":
+            print("--------------------")
+            print("NS IS BROKEN")
+            exit(1)
+
+    print("--------------------")
+    print("Done. " + instance_name + " is " + state)
