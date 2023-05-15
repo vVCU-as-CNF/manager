@@ -184,6 +184,7 @@ def createNSInstance(vim_acc_id, nsd_id, instance_name):
     }
 
     r = session.post(url, data=payload)
+    print(r.text)
 
     instance = yaml.safe_load(r.text)
     instance_id = instance["id"]
@@ -215,27 +216,6 @@ def instantiateNSInstance(instance_id, vim_acc_id, instance_name):
     print("  name - " + instance_name)
     print("  id   - " + instance_id)
 
-def buildNSInstance(vim_acc_id, nsd_id, instance_name):
-    """Creates and instantiates NS instance on OSM"""
-    url = BASE_URL + "nslcm/v1/ns_instances_content"
-    payload = {
-        "nsdId": nsd_id, 
-        "vimAccountId": vim_acc_id,
-        "nsName": instance_name,
-    }
-
-    r = session.post(url, data=payload)
-    print(r.text)
-    instance = yaml.safe_load(r.text)
-    instance_id = instance["id"]
-
-    print("--------------------")
-    print("Created and instantiated NS instance: ")
-    print("  name - " + instance_name)
-    print("  id   - " + instance_id)
-
-    return instance_id    
-
 def terminateNSInstance(instance_id):
     """Terminates a given NS instance on OSM"""
     url = BASE_URL + "nslcm/v1/ns_instances/" + instance_id + "/terminate"
@@ -262,7 +242,9 @@ def waitForNSState(instance_name, state):
     """Waits for an instance to reach a certain state in OSM"""
     instances = listNSInstances()
     
-    while(instances[instance_name]["state"] != state):
+    tries = 0
+    while(instances[instance_name]["state"] != state and tries < 20):
+        tries += 1
         print("--------------------")
         print("Waiting... " + instance_name + " is " + instances[instance_name]["state"] + ", need " + state)
 
