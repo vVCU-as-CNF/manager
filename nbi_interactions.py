@@ -167,7 +167,7 @@ def listNSInstances(print_info=False):
         print("All NS instances: ")
         for k in ns_instances:
             print("  " + k)
-            print("  id    - " + ns_instances[k]["id"])
+            print("  name  - " + ns_instances[k]["name"])
             print("  state - " + ns_instances[k]["state"])
 
     return ns_instances
@@ -240,23 +240,23 @@ def deleteNSInstance(instance_id):
     print("Deleted NS instance: ")
     print("  id - " + instance_id)
 
-def waitForNSState(instance_name, state):
+def waitForNSState(ns_id, state):
     """Waits for an instance to reach a certain state in OSM"""
     instances = listNSInstances()
     
     tries = 0
-    while(instances[instance_name]["state"] != state and tries < 20):
+    while(instances[ns_id]["state"] != state and tries < 20):
         tries += 1
         print("--------------------")
-        print("Waiting... " + instance_name + " is " + instances[instance_name]["state"] + ", need " + state + " (" + str(tries) + "/20)")
+        print("Waiting... " + instances[ns_id]["name"] + " is " + instances[ns_id]["state"] + ", need " + state + " (" + str(tries) + "/20)")
 
         sleep(3)
         instances = listNSInstances()
 
-        if instances[instance_name]["state"] == "BROKEN":
+        if instances[ns_id]["state"] == "BROKEN":
             print("--------------------")
             print("NS IS BROKEN")
             exit(1)
 
     print("--------------------")
-    print("Done. " + instance_name + " is " + state)
+    print("Done. " + instances[ns_id]["name"] + " is " + state)

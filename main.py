@@ -32,7 +32,7 @@ async def list_instances():
 # create a new ns instance
 class CreateNSData(BaseModel):
     vim_account: str
-    nsd: str
+    nsd_name: str
     instance_name: str
 @app.post("/osm/ns/create")
 async def create(data: CreateNSData):
@@ -40,11 +40,11 @@ async def create(data: CreateNSData):
     vim_accounts = listVIMAccounts()
     ns_packages = listNSPackages()
 
-    instance_id = createNSInstance(vim_accounts[data.vim_account], ns_packages[data.nsd], data.instance_name)
+    instance_id = createNSInstance(vim_accounts[data.vim_account], ns_packages[data.nsd_name], data.instance_name)
     instantiateNSInstance(instance_id, vim_accounts[data.vim_account], data.instance_name)
 
     deleteToken()
-    return {"instance_id": instance_id, "instance_name": data.instance_name, "vim_account": data.vim_account, "nsd": data.nsd}
+    return {"instance_id": instance_id, "instance_name": data.instance_name, "vim_account": data.vim_account, "nsd": data.nsd_name}
 
 # get info about ns instance
 @app.get("/osm/ns/{ns_id}")
@@ -69,7 +69,7 @@ async def delete_instance(ns_id: str):
         raise HTTPException(status_code=404, detail="NS instance not found")
 
     terminateNSInstance(ns_id)
-    waitForNSState(ns_instances[ns_id]["name"], "NOT_INSTANTIATED")
+    waitForNSState(ns_id, "NOT_INSTANTIATED")
     deleteNSInstance(ns_id)
     deleteToken()
     return {"id": ns_id, "name": ns_instances[ns_id]["name"]}
