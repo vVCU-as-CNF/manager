@@ -150,20 +150,25 @@ def getNSPackageInfo(package_id):
 # NS INSTANCES
 #
 
-def listNSInstances():
+def listNSInstances(print_info=False):
     """Lists all NS instances on OSM"""
     url = BASE_URL + "nslcm/v1/ns_instances"
     r = session.get(url)
 
     ns_instances = yaml.safe_load(r.text)
-    ns_instances = {a["name"]: {"id": a["_id"], "state": a["nsState"]} for a in ns_instances}
+    ns_instances = {a["_id"]: {"name": a["name"],
+                                "state": a["nsState"],
+                                "nsd_name": a["nsd-name-ref"],
+                                "nsd_id": a["nsd-id"]
+                            } for a in ns_instances}
 
-    print("--------------------")
-    print("All NS instances: ")
-    for k in ns_instances:
-        print("  " + k)
-        print("  id    - " + ns_instances[k]["id"])
-        print("  state - " + ns_instances[k]["state"])
+    if print_info:
+        print("--------------------")
+        print("All NS instances: ")
+        for k in ns_instances:
+            print("  " + k)
+            print("  id    - " + ns_instances[k]["id"])
+            print("  state - " + ns_instances[k]["state"])
 
     return ns_instances
 
@@ -184,7 +189,6 @@ def createNSInstance(vim_acc_id, nsd_id, instance_name):
     }
 
     r = session.post(url, data=payload)
-    print(r.text)
 
     instance = yaml.safe_load(r.text)
     instance_id = instance["id"]
@@ -223,7 +227,7 @@ def terminateNSInstance(instance_id):
     r = session.post(url)
 
     print("--------------------")
-    print("Terminated NS instance: ")
+    print("Terminating NS instance: ")
     # print("  name - " + NAME)
     print("  id - " + instance_id)
 
@@ -231,8 +235,6 @@ def deleteNSInstance(instance_id):
     """Deletes a given NS instance on OSM"""
     url = BASE_URL + "nslcm/v1/ns_instances/" + instance_id
     r = session.delete(url)
-
-    print(r.text)
 
     print("--------------------")
     print("Deleted NS instance: ")
@@ -246,7 +248,7 @@ def waitForNSState(instance_name, state):
     while(instances[instance_name]["state"] != state and tries < 20):
         tries += 1
         print("--------------------")
-        print("Waiting... " + instance_name + " is " + instances[instance_name]["state"] + ", need " + state)
+        print("Waiting... " + instance_name + " is " + instances[instance_name]["state"] + ", need " + state + " (" + str(tries) + "/20)")
 
         sleep(3)
         instances = listNSInstances()
