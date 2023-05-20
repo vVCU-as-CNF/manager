@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel
 from kubernetes import client, config
+from datetime import datetime
 
 from nbi_interactions import *
 from k8s_interactions import *
@@ -103,6 +104,7 @@ async def migrate_instance(ns_id: str, data: MigrateNSData):
         deleteToken()
         raise HTTPException(status_code=404, detail="VIM account not found")
 
+    ts = datetime.now()
     new_instance_name = ns_name
     new_instance_id = createNSInstance(vim_accounts[data.future_vim_account], old_instance["nsd_id"], new_instance_name)
     waitForNSState(new_instance_id, "NOT_INSTANTIATED")
@@ -116,11 +118,21 @@ async def migrate_instance(ns_id: str, data: MigrateNSData):
 
     api = client.CoreV1Api()
     waitForPodReady(api, CLUSTER_NAMESPACE)
+    time1 = (datetime.now() - ts).total_seconds()
 
     terminateNSInstance(ns_id)
     waitForNSState(ns_id, "NOT_INSTANTIATED")
     deleteNSInstance(ns_id)
+    time2 = (datetime.now() - ts).total_seconds()
 
     deleteToken()
 
-    return {"old_instance": old_instance, "new_instance": {"id": new_instance_id, "name": new_instance_name, "vim_account": data.future_vim_account}}
+    return {"old_instance": old_instance, "new_instance": {"id": new_instance_id, "name": new_instance_name, "vim_account": data.future_vim_account}, "time_till_ready": time1, "time_till_done": time2}
+
+app.get("/grafana/vim_accounts")
+async def get_vim_accounts():
+    return {"Hello": "World"}
+
+app.get("/grafana/dt/{dt_id}")
+async def get_dt(dt_id: str):
+    return {"Hello": "World"}
