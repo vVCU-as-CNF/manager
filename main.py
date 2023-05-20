@@ -1,3 +1,5 @@
+import yaml
+
 from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel
 from kubernetes import client, config
@@ -129,10 +131,34 @@ async def migrate_instance(ns_id: str, data: MigrateNSData):
 
     return {"old_instance": old_instance, "new_instance": {"id": new_instance_id, "name": new_instance_name, "vim_account": data.future_vim_account}, "time_till_ready": time1, "time_till_done": time2}
 
-app.get("/grafana/vim_accounts")
+# get info about vim accounts
+@app.get("/grafana/vim_accounts")
 async def get_vim_accounts():
-    return {"Hello": "World"}
+    getToken()
+    
+    vim_accounts = {}
+    ns_instances = listNSInstances()
+    for instance_id in ns_instances:
+        info = yaml.safe_load(getNSInstanceInfo(instance_id))
+        for i in info["vld"][0]["vim_info"]:
+            vim_acc = i.replace("vim:", "")
+            
+            if vim_acc not in vim_accounts:
+                vim_accounts[vim_acc] = [ns_instances[instance_id]]
+            else:
+                vim_accounts[vim_acc].append(ns_instances[instance_id])
 
-app.get("/grafana/dt/{dt_id}")
+    deleteToken()
+
+    return vim_accounts
+
+# get info about specific dt
+@app.get("/grafana/dt/{dt_id}")
 async def get_dt(dt_id: str):
-    return {"Hello": "World"}
+    getToken()
+
+    ns_instances = listNSInstances()
+
+    deleteToken()
+
+    return ns_instances[dt_id]

@@ -68,6 +68,7 @@ def listVIMAccounts():
     r = session.get(url)
 
     vim_accounts = yaml.safe_load(r.text)
+    print(r.text)
     vim_accounts = {a["name"]: a["_id"] for a in vim_accounts}
 
     print("--------------------")
@@ -83,7 +84,7 @@ def getVIMAccountInfo(account_id):
     url = BASE_URL + "admin/v1/vim_accounts/" + account_id
     r = session.get(url)
 
-    print(r.text)
+    return r.text
 
 #
 # VNF PACKAGES
@@ -115,7 +116,7 @@ def getVNFPackageInfo(package_id):
     url = BASE_URL + "vnfpkgm/v1/vnf_packages/" + package_id
     r = session.get(url)
 
-    print(r.text)
+    return r.text
 
 #
 # NS PACKAGES
@@ -143,7 +144,7 @@ def getNSPackageInfo(package_id):
     url = BASE_URL + "nsd/v1/ns_descriptors/" + package_id
     r = session.get(url)
 
-    print(r.text)
+    return r.text
 
 
 #
@@ -177,7 +178,7 @@ def getNSInstanceInfo(id):
     url = BASE_URL + "nslcm/v1/ns_instances/" + id
     r = session.get(url)
 
-    print(r.text)
+    return r.text
 
 def createNSInstance(vim_acc_id, nsd_id, instance_name):
     """Creates NS instance on OSM (does not instantiate it)"""
