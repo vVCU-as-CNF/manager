@@ -6,9 +6,9 @@ session.verify = False
 
 def main():
     while True:
-        sleep(random.randint(1, 10))
-        r = session.get("https://localhost:8000/listener/countdown")
+        r = session.get("http://localhost:8000/listener/countdown")
         print(r.text)
+        sleep(random.randint(1, 10))
 
 if __name__ == "__main__":
     main()
