@@ -1,4 +1,5 @@
 import yaml
+import uvicorn
 
 from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel
@@ -7,6 +8,7 @@ from datetime import datetime
 
 from nbi_interactions import *
 from k8s_interactions import *
+from listener import *
 
 CONFIG1 = "clusters/kubelet1.config"
 CONFIG2 = "clusters/kubelet2.config"
@@ -17,11 +19,35 @@ VIM_ACCOUNT_2 = "5gasp-k8s-2"
 CLUSTER_NAMESPACE = "99df5250-1cec-49f5-aba8-25017a9aadb7"
 
 app = FastAPI()
+tile_listener = None
+
+@app.on_event("startup")
+def startup():
+    global tile_listener
+    tile_listener = Listener()
 
 # fodase
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
+# start tile listener
+@app.get("/listener/start")
+async def start_listerner():
+    global tile_listener
+    if tile_listener.start() == 0:
+        return {"message": "tile listener started"}
+    else:
+        return {"message": "tile listener already started"}
+
+# stop the listener
+@app.get("/listener/stop")
+async def stop_listener():
+    global tile_listener
+    if tile_listener.stop() == 0:
+        return {"message": "tile listener stopped"}
+    else:
+        return {"message": "tile listener not started"}
 
 # list all ns instances
 @app.get("/osm/ns/")
@@ -87,7 +113,6 @@ async def migrate_instance(ns_id: str, data: MigrateNSData):
     ns_instances = listNSInstances()
     ns_name = data.instance_name
     
-    print(ns_instances)
     if ns_id not in ns_instances:
         deleteToken()
         raise HTTPException(status_code=404, detail="NS instance (id) not found")
@@ -162,3 +187,6 @@ async def get_dt(dt_id: str):
     deleteToken()
 
     return ns_instances[dt_id]
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="localhost", port=8000)

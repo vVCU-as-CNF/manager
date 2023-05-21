@@ -68,7 +68,6 @@ def listVIMAccounts():
     r = session.get(url)
 
     vim_accounts = yaml.safe_load(r.text)
-    print(r.text)
     vim_accounts = {a["name"]: a["_id"] for a in vim_accounts}
 
     print("--------------------")
@@ -246,12 +245,12 @@ def waitForNSState(ns_id, state):
     instances = listNSInstances()
     
     tries = 0
-    while(instances[ns_id]["state"] != state and tries < 20):
+    while(instances[ns_id]["state"] != state and tries < 10):
         tries += 1
         print("--------------------")
-        print("Waiting... " + instances[ns_id]["name"] + " is " + instances[ns_id]["state"] + ", need " + state + " (" + str(tries) + "/20)")
+        print("Waiting... " + instances[ns_id]["name"] + " is " + instances[ns_id]["state"] + ", need " + state + " (" + str(tries) + "/10)")
 
-        sleep(3)
+        sleep(8)
         instances = listNSInstances()
 
         if instances[ns_id]["state"] == "BROKEN":
