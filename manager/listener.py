@@ -87,7 +87,7 @@ class Listener():
         deleteToken()
 
         print("Instance created and instantiated. Listening...")
-        self.last_migrate = datetime.now() - timedelta(minutes=4) # 1 min to start migrations
+        self.last_migrate = datetime.now() - timedelta(minutes=4, seconds=40) # 1 min to start migrations
 
         self.client.subscribe(self.topic)
         self.client.loop_start()
