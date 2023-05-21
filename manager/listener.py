@@ -97,7 +97,6 @@ class Listener():
         if self.instance_name == "":
             return 1
         
-        self.client.unsubscribe(self.topic)
         self.client.loop_stop()
         
         getToken()
