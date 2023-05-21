@@ -1,8 +1,8 @@
 from time import sleep
 from kubernetes import client, config
 
-from nbi_interactions import *
-from k8s_interactions import *
+from manager.nbi_interactions import *
+from manager.k8s_interactions import *
 
 #
 # STATIC VARIABLES

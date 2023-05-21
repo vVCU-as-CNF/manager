@@ -2,7 +2,7 @@ import requests
 import json
 from time import sleep
 
-from nbi_interactions import *
+from manager.nbi_interactions import *
 
 BASE_URL = "http://localhost:8000/"
 VIM_ACCOUNT_1 = "5gasp-k8s-1"
