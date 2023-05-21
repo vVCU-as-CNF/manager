@@ -48,6 +48,12 @@ async def stop_listener():
         return {"message": "tile listener stopped"}
     else:
         return {"message": "tile listener not started"}
+    
+# get time till next migration
+@app.get("/listener/countdown")
+async def countdown():
+    global tile_listener
+    return {"countdown": tile_listener.countdown()}
 
 # list all ns instances
 @app.get("/osm/ns/")

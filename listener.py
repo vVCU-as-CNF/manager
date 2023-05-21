@@ -110,5 +110,8 @@ class Listener():
         self.instance_id = ""
         
         return 0
+    
+    def countdown(self):
+        return str(self.last_migrate + timedelta(minutes=self.migration_cooldown) - datetime.now())    
         
 
