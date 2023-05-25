@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 from nbi_interactions import *
 
 BASE_URL = "http://localhost:8000/"
-VIM_ACCOUNT_1 = "5gasp-k8s-1"
-VIM_ACCOUNT_2 = "5gasp-k8s-2"
+VIM_ACCOUNT_1 = "Jarvis"
+VIM_ACCOUNT_2 = "Jarvis2"
 
 
 class Listener():

@@ -8,7 +8,8 @@ from time import sleep
 # STATIC VARIABLES
 #
 
-BASE_URL = "https://10.255.28.79:9999/osm/"
+BASE_URL = "https://10.255.28.33:9999/osm/"
+CLUSTER_NAMESPACE = "2a6f15e7-cef8-4037-9423-74516a7ccfa8"
 
 session = requests.Session()
 session.verify = False
@@ -81,6 +82,33 @@ def listVIMAccounts():
 def getVIMAccountInfo(account_id):
     """Gets VIM account info from OSM"""
     url = BASE_URL + "admin/v1/vim_accounts/" + account_id
+    r = session.get(url)
+
+    return r.text
+
+#
+# K8S CLUSTERS
+#
+
+def listK8SClusters():
+    """Lists all available K8s Clusters from OSM"""
+    url = BASE_URL + "admin/v1/k8sclusters"
+    r = session.get(url)
+
+    k8s_clusters = yaml.safe_load(r.text)
+    k8s_clusters = {a["name"]: a["_id"] for a in k8s_clusters}
+
+    print("--------------------")
+    print("All K8s Clusters: ")
+    for k in k8s_clusters:
+        print("  " + k)
+        print("  id - " + k8s_clusters[k])
+    
+    return k8s_clusters
+
+def getK8SClusterInfo(cluster_id):
+    """Gets K8s cluster info from OSM"""
+    url = BASE_URL + "admin/v1/k8sclusters/" + cluster_id
     r = session.get(url)
 
     return r.text
@@ -186,6 +214,7 @@ def createNSInstance(vim_acc_id, nsd_id, instance_name):
         "vimAccountId": vim_acc_id,
         "nsdId": nsd_id, 
         "nsName": instance_name,
+        "k8s-namespace": CLUSTER_NAMESPACE,
     }
 
     r = session.post(url, data=payload)
@@ -208,11 +237,13 @@ def instantiateNSInstance(instance_id, vim_acc_id, instance_name):
         "nsdId": instance_id,
         "vimAccountId": vim_acc_id,
         "nsName": instance_name,
+        "k8s-namespace": CLUSTER_NAMESPACE,
     }
 
     r = session.post(url, data=payload)
 
     instance = yaml.safe_load(r.text)
+    print(r.text)
     instance_id = instance["id"]
 
     print("--------------------")

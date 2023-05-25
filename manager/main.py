@@ -13,10 +13,10 @@ from listener import *
 CONFIG1 = "clusters/kubelet1.config"
 CONFIG2 = "clusters/kubelet2.config"
 
-VIM_ACCOUNT_1 = "5gasp-k8s-1"
-VIM_ACCOUNT_2 = "5gasp-k8s-2"
+VIM_ACCOUNT_1 = "Jarvis"
+VIM_ACCOUNT_2 = "Jarvis2"
 
-CLUSTER_NAMESPACE = "99df5250-1cec-49f5-aba8-25017a9aadb7"
+CLUSTER_NAMESPACE = "pi-vvcu" # "2a6f15e7-cef8-4037-9423-74516a7ccfa8"
 
 app = FastAPI()
 tile_listener = None
