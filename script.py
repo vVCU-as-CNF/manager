@@ -20,7 +20,7 @@ INSTANCE_NAME = "nbi-test" # instance name
 NSD_NAME = "vvcu-as-acnf_ns" # descriptor name
 
 # K8S
-CLUSTER_NAMESPACE = "pi-vvcu" # "2a6f15e7-cef8-4037-9423-74516a7ccfa8"
+CLUSTER_NAMESPACE = "2a6f15e7-cef8-4037-9423-74516a7ccfa8"
 
 #
 # MAIN

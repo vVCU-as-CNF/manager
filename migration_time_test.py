@@ -41,6 +41,7 @@ def main():
         }
         
         r = session.get(url=url, data=json.dumps(payload))
+        print(r.text)
         data = json.loads(r.text)
         times_till_ready.append(data["time_till_ready"])
         times_till_done.append(data["time_till_done"])
