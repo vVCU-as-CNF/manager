@@ -5,11 +5,11 @@ from time import sleep
 from manager.nbi_interactions import *
 
 BASE_URL = "http://localhost:8000/"
-VIM_ACCOUNT_1 = "5gasp-k8s-1"
-VIM_ACCOUNT_2 = "5gasp-k8s-2"
-INSTANCE_NAME = "toupeirito"
+VIM_ACCOUNT_1 = "Jarvis"
+VIM_ACCOUNT_2 = "Jarvis2"
+INSTANCE_NAME = "frusco"
 
-NTESTS = 10
+NTESTS = 20
 
 session = requests.Session()
 session.verify = False
