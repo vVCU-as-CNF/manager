@@ -16,7 +16,7 @@ CONFIG2 = "clusters/kubelet2.config"
 VIM_ACCOUNT_1 = "Jarvis"
 VIM_ACCOUNT_2 = "Jarvis2"
 
-CLUSTER_NAMESPACE = "pi-vvcu" # "2a6f15e7-cef8-4037-9423-74516a7ccfa8"
+CLUSTER_NAMESPACE = "2a6f15e7-cef8-4037-9423-74516a7ccfa8"
 
 app = FastAPI()
 tile_listener = None
