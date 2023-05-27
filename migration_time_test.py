@@ -5,7 +5,7 @@ from time import sleep
 from manager.nbi_interactions import *
 
 BASE_URL = "http://localhost:8000/"
-VIM_ACCOUNT_1 = "5gasp-k8s-1"
+VIM_ACCOUNT_1 = "Jarvis"
 VIM_ACCOUNT_2 = "5gasp-k8s-2"
 INSTANCE_NAME = "toupeirito"
 
@@ -41,7 +41,6 @@ def main():
         }
         
         r = session.get(url=url, data=json.dumps(payload))
-        print(r.text)
         data = json.loads(r.text)
         times_till_ready.append(data["time_till_ready"])
         times_till_done.append(data["time_till_done"])
