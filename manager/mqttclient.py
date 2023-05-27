@@ -77,11 +77,11 @@ class MqttClient():
             r = session.get(url=url, data=json.dumps(payload))
             print(r.text)
             data = json.loads(r.text)
-            self.instance_id = data["new_instance"]["id"]
+            # self.instance_id = data["new_instance"]["id"]
 
             print("Migration complete!")
-            print("Time \l Ready: " + str(data["time_till_ready"]))
-            print("Time Till Done: " + str(data["time_till_done"]))
+            # print("Time \l Ready: " + str(data["time_till_ready"]))
+            # print("Time Till Done: " + str(data["time_till_done"]))
 
             self.listen_client.subscribe(self.listen_topic)
         else:
@@ -95,7 +95,7 @@ class MqttClient():
         random_string = ''.join(random.choice('abcdefghijklmnopqrstuvwxyz') for _ in range(4))
         self.instance_name = "frog-ns-" + random_string
 
-        getToken()
+        token = getToken()
 
         vim_accounts = listVIMAccounts()
         ns_packages = listNSPackages()
@@ -103,7 +103,7 @@ class MqttClient():
         self.instance_id = createNSInstance(vim_accounts[self.current_vim_account], ns_packages["vvcu-as-acnf_ns"], self.instance_name)
         instantiateNSInstance(self.instance_id, vim_accounts[self.current_vim_account], self.instance_name)
         waitForNSState(self.instance_id, "READY")
-        deleteToken()
+        deleteToken(token)
 
         print("Instance created and instantiated. Listening...")
         self.last_migrate = datetime.now() - timedelta(minutes=4, seconds=40) # 1 min to start migrations
@@ -119,11 +119,11 @@ class MqttClient():
         self.listen_client.unsubscribe(self.listen_topic)
         self.listen_client.loop_stop()
         
-        getToken()
+        token = getToken()
         terminateNSInstance(self.instance_id)
         waitForNSState(self.instance_id, "NOT_INSTANTIATED")
         deleteNSInstance(self.instance_id)
-        deleteToken()
+        deleteToken(token)
 
         self.instance_name = ""
         self.instance_id = ""
@@ -150,16 +150,22 @@ class MqttClient():
             sleep(5)
 
     def get_dts(self):
-        getToken()
+        token = getToken()
         
         dts = {}
         ns_instances = listNSInstances()
         for instance_id in ns_instances:
             data = getNSInstanceInfo(instance_id)
             info = yaml.safe_load(data)
-            vim = list(info["vld"][0]["vim_info"].keys())[0].split(":")[1]
+            # print(list(info["vld"][0]["vim_info"].keys()))
+            if "vim_info" not in info["vld"][0] or len(info["vld"][0]["vim_info"]) == 0:
+                dts[ns_instances[instance_id]["name"]] = {"vim": "None", "id": instance_id, "nsd_name": ns_instances[instance_id]["nsd_name"], "state": ns_instances[instance_id]["state"]}
+            else: 
+                vim = info["vld"][0]["vim_info"]
+                vim2 = list(vim.keys())[0]
+                vim3 = vim2.split(":")[0]
 
-            dts[ns_instances[instance_id]["name"]] = {"vim": vim, "id": instance_id, "nsd_name": ns_instances[instance_id]["nsd_name"], "state": ns_instances[instance_id]["state"]}
+                dts[ns_instances[instance_id]["name"]] = {"vim": vim3, "id": instance_id, "nsd_name": ns_instances[instance_id]["nsd_name"], "state": ns_instances[instance_id]["state"]}
 
-        deleteToken()
+        deleteToken(token)
         return dts

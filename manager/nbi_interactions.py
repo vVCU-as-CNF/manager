@@ -35,9 +35,9 @@ def getToken(print_info=False):
 
     return token
 
-def deleteToken(print_info=False):
+def deleteToken(token=None, print_info=False):
     """Deletes current token from OSM"""
-    url = BASE_URL + "admin/v1/tokens"
+    url = BASE_URL + "admin/v1/tokens" if token == None else BASE_URL + "admin/v1/tokens/" + token
     r = session.delete(url)
 
     token = r.text.split(" ")[2].replace("\'", "")
@@ -186,6 +186,7 @@ def listNSInstances(print_info=False):
     url = BASE_URL + "nslcm/v1/ns_instances"
     r = session.get(url)
 
+    print(r.text)
     ns_instances = yaml.safe_load(r.text)
     ns_instances = {a["_id"]: {"name": a["name"],
                                 "state": a["nsState"],
@@ -290,6 +291,7 @@ def waitForNSState(ns_id, state):
         if instances[ns_id]["state"] == "BROKEN":
             print("--------------------")
             print("NS IS BROKEN")
+            deleteToken()
             exit(1)
 
     print("--------------------")

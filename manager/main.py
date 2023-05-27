@@ -24,6 +24,8 @@ mqttclient = None
 publish_thread = None
 publish_flag = False
 
+migrations = {}
+
 @app.on_event("startup")
 def startup():
     global mqttclient
@@ -36,21 +38,17 @@ def read_root():
 
 # start tile listener
 @app.get("/listener/start")
-async def start_listerner():
+async def start_listerner(tasks: BackgroundTasks):
     global mqttclient
-    if mqttclient.startListening() == 0:
-        return {"message": "tile listener started"}
-    else:
-        return {"message": "tile listener already started"}
+    tasks.add_task(mqttclient.startListening)
+    return {"message": "tile listener started"}
 
 # stop the listener
 @app.get("/listener/stop")
-async def stop_listener():
+async def stop_listener(tasks: BackgroundTasks):
     global mqttclient
-    if mqttclient.stopListening() == 0:
-        return {"message": "tile listener stopped"}
-    else:
-        return {"message": "tile listener not started"}
+    tasks.add_task(mqttclient.stopListening)
+    return {"message": "tile listener stopped"}
     
 # get time till next migration
 @app.get("/listener/countdown")
@@ -66,10 +64,10 @@ async def get_topics():
 # list all ns instances
 @app.get("/osm/ns/")
 async def list_instances():
-    getToken()
+    token = token = getToken()
     ns_instances = listNSInstances(print_info=True)
     
-    deleteToken()
+    deleteToken(token)
     return ns_instances
 
 # create a new ns instance
@@ -79,23 +77,23 @@ class CreateNSData(BaseModel):
     instance_name: str
 @app.post("/osm/ns/create")
 async def create(data: CreateNSData):
-    getToken()
+    token = token = getToken()
     vim_accounts = listVIMAccounts()
     ns_packages = listNSPackages()
 
     instance_id = createNSInstance(vim_accounts[data.vim_account], ns_packages[data.nsd_name], data.instance_name)
     instantiateNSInstance(instance_id, vim_accounts[data.vim_account], data.instance_name)
 
-    deleteToken()
+    deleteToken(token)
     return {"instance_id": instance_id, "instance_name": data.instance_name, "vim_account": data.vim_account, "nsd": data.nsd_name}
 
 # get info about ns instance
 @app.get("/osm/ns/{ns_id}")
 async def get_instance(ns_id: str):
-    getToken()
+    token = getToken()
     ns_instances = listNSInstances()
     
-    deleteToken()
+    deleteToken(token)
     if ns_id not in ns_instances:
         raise HTTPException(status_code=404, detail="NS instance (id) not found")
     
@@ -104,17 +102,17 @@ async def get_instance(ns_id: str):
 # delete ns instance
 @app.delete("/osm/ns/{ns_id}/delete")
 async def delete_instance(ns_id: str):
-    getToken()
+    token = getToken()
     ns_instances = listNSInstances()
-
+    
     if ns_id not in ns_instances:
-        deleteToken()
+        deleteToken(token)
         raise HTTPException(status_code=404, detail="NS instance not found")
 
     terminateNSInstance(ns_id)
     waitForNSState(ns_id, "NOT_INSTANTIATED")
     deleteNSInstance(ns_id)
-    deleteToken()
+    deleteToken(token)
     return {"id": ns_id, "name": ns_instances[ns_id]["name"]}
 
 # migrate a ns instance
@@ -122,39 +120,66 @@ class MigrateNSData(BaseModel):
     instance_name: str
     future_vim_account: str
 @app.get("/osm/ns/{ns_id}/migrate")
-async def migrate_instance(ns_id: str, data: MigrateNSData):
-    getToken()
+async def migrate_instance(ns_id: str, data: MigrateNSData, tasks: BackgroundTasks):
+    token = getToken()
     ns_instances = listNSInstances()
     ns_name = data.instance_name
     
     if ns_id not in ns_instances:
-        deleteToken()
+        deleteToken(token)
         raise HTTPException(status_code=404, detail="NS instance (id) not found")
 
     if ns_name not in [ns_instances[i]["name"] for i in ns_instances]:
-        deleteToken()
+        deleteToken(token)
         raise HTTPException(status_code=404, detail="NS instance (name) not found")
 
     if ns_instances[ns_id]["state"] != "READY":
-        deleteToken()
+        deleteToken(token)
         raise HTTPException(status_code=400, detail="NS instance is not ready")
 
     old_instance = ns_instances[ns_id]
     vim_accounts = listVIMAccounts()
     if data.future_vim_account not in vim_accounts:
-        deleteToken()
+        deleteToken(token)
         raise HTTPException(status_code=404, detail="VIM account not found")
+
+    deleteToken(token)
+    tasks.add_task(migrate, ns_id, ns_name, data.future_vim_account)
+    return {"message": "migrating", "instance_id": ns_id, "instance_name": ns_name, "future_vim_account": data.future_vim_account}
+
+@app.get("/publisher/start")
+async def start_publisher():
+    global mqttclient
+    mqttclient.startPublishing()
+    
+    return {"message": "publisher started"}
+
+@app.get("/publisher/stop")
+async def stop_publisher():
+    global mqttclient
+    mqttclient.stopPublishing()
+
+    return {"message": "publisher stopped"}
+
+def migrate(ns_id, instance_name, future_vim_account):
+    token = getToken()
+
+    ns_instances = listNSInstances()
+    ns_name = instance_name
+
+    old_instance = ns_instances[ns_id]
+    vim_accounts = listVIMAccounts()
 
     ts = datetime.now()
     new_instance_name = ns_name
-    new_instance_id = createNSInstance(vim_accounts[data.future_vim_account], old_instance["nsd_id"], new_instance_name)
+    new_instance_id = createNSInstance(vim_accounts[future_vim_account], old_instance["nsd_id"], new_instance_name)
     waitForNSState(new_instance_id, "NOT_INSTANTIATED")
-    instantiateNSInstance(new_instance_id, vim_accounts[data.future_vim_account], new_instance_name)
+    instantiateNSInstance(new_instance_id, vim_accounts[future_vim_account], new_instance_name)
     waitForNSState(new_instance_id, "READY")
     
-    if data.future_vim_account == VIM_ACCOUNT_1:
+    if future_vim_account == VIM_ACCOUNT_1:
         config.load_kube_config(config_file="clusters/kubelet1.config")
-    elif data.future_vim_account == VIM_ACCOUNT_2:
+    elif future_vim_account == VIM_ACCOUNT_2:
         config.load_kube_config(config_file="clusters/kubelet2.config")
 
     api = client.CoreV1Api()
@@ -166,22 +191,8 @@ async def migrate_instance(ns_id: str, data: MigrateNSData):
     deleteNSInstance(ns_id)
     time2 = (datetime.now() - ts).total_seconds()
 
-    deleteToken()
-    return {"old_instance": old_instance, "new_instance": {"id": new_instance_id, "name": new_instance_name, "vim_account": data.future_vim_account}, "time_till_ready": time1, "time_till_done": time2}
+    deleteToken(token)
 
-@app.get("/publisher/start")
-async def start_publisher():
-    global mqttclient
-    mqttclient.startPublishing()    
-    
-    return {"message": "publisher started"}
-
-@app.get("/publisher/stop")
-async def stop_publisher():
-    global mqttclient
-    mqttclient.stopPublishing()
-
-    return {"message": "publisher stopped"}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
