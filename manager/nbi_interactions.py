@@ -18,7 +18,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 #
 # TOKENS
 #
-def getToken():
+def getToken(print_info=False):
     """Get token from OSM"""
     url = BASE_URL + "admin/v1/tokens"
     payload = {
@@ -28,21 +28,23 @@ def getToken():
     r = session.post(url, data=payload)
 
     token = yaml.safe_load(r.text)["id"]
-    
-    print("--------------------")
-    print("Got token: " + token)
+
+    if print_info:    
+        print("--------------------")
+        print("Got token: " + token)
 
     return token
 
-def deleteToken():
+def deleteToken(print_info=False):
     """Deletes current token from OSM"""
     url = BASE_URL + "admin/v1/tokens"
     r = session.delete(url)
 
     token = r.text.split(" ")[2].replace("\'", "")
-
-    print("--------------------")
-    print("Deleted current token: " + token)
+    
+    if print_info:    
+        print("--------------------")
+        print("Deleted current token: " + token)
 
 def allTokens():
     """Lists all tokens from OSM"""

@@ -167,7 +167,6 @@ async def migrate_instance(ns_id: str, data: MigrateNSData):
     time2 = (datetime.now() - ts).total_seconds()
 
     deleteToken()
-
     return {"old_instance": old_instance, "new_instance": {"id": new_instance_id, "name": new_instance_name, "vim_account": data.future_vim_account}, "time_till_ready": time1, "time_till_done": time2}
 
 @app.get("/publisher/start")

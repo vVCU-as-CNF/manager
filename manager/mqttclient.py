@@ -75,6 +75,7 @@ class MqttClient():
             self.listen_client.unsubscribe(self.listen_topic)
 
             r = session.get(url=url, data=json.dumps(payload))
+            print(r.text)
             data = json.loads(r.text)
             self.instance_id = data["new_instance"]["id"]
 
@@ -89,7 +90,6 @@ class MqttClient():
 
     def startListening(self):
         if self.instance_name != "":
-            print(self.instance_name)
             return 1
         
         random_string = ''.join(random.choice('abcdefghijklmnopqrstuvwxyz') for _ in range(4))
@@ -156,7 +156,6 @@ class MqttClient():
         ns_instances = listNSInstances()
         for instance_id in ns_instances:
             data = getNSInstanceInfo(instance_id)
-            print(ns_instances[instance_id])
             info = yaml.safe_load(data)
             vim = list(info["vld"][0]["vim_info"].keys())[0].split(":")[1]
 
