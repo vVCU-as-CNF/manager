@@ -1,14 +1,15 @@
 import yaml
 import uvicorn
+import threading
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from kubernetes import client, config
 from datetime import datetime
 
 from nbi_interactions import *
 from k8s_interactions import *
-from listener import *
+from mqttclient import *
 
 CONFIG1 = "clusters/kubelet1.config"
 CONFIG2 = "clusters/kubelet2.config"
@@ -16,15 +17,17 @@ CONFIG2 = "clusters/kubelet2.config"
 VIM_ACCOUNT_1 = "Jarvis"
 VIM_ACCOUNT_2 = "Jarvis2"
 
-CLUSTER_NAMESPACE = "pi-vvcu" # "2a6f15e7-cef8-4037-9423-74516a7ccfa8"
+CLUSTER_NAMESPACE = "2a6f15e7-cef8-4037-9423-74516a7ccfa8"
 
 app = FastAPI()
-tile_listener = None
+mqttclient = None
+publish_thread = None
+publish_flag = False
 
 @app.on_event("startup")
 def startup():
-    global tile_listener
-    tile_listener = Listener()
+    global mqttclient
+    mqttclient = MqttClient()
 
 # fodase
 @app.get("/")
@@ -34,8 +37,8 @@ def read_root():
 # start tile listener
 @app.get("/listener/start")
 async def start_listerner():
-    global tile_listener
-    if tile_listener.start() == 0:
+    global mqttclient
+    if mqttclient.startListening() == 0:
         return {"message": "tile listener started"}
     else:
         return {"message": "tile listener already started"}
@@ -43,8 +46,8 @@ async def start_listerner():
 # stop the listener
 @app.get("/listener/stop")
 async def stop_listener():
-    global tile_listener
-    if tile_listener.stop() == 0:
+    global mqttclient
+    if mqttclient.stopListening() == 0:
         return {"message": "tile listener stopped"}
     else:
         return {"message": "tile listener not started"}
@@ -52,8 +55,8 @@ async def stop_listener():
 # get time till next migration
 @app.get("/listener/countdown")
 async def countdown():
-    global tile_listener
-    return {"countdown": tile_listener.countdown()}
+    global mqttclient
+    return {"countdown": mqttclient.countdown()}
 
 # list all ns instances
 @app.get("/osm/ns/")
@@ -162,37 +165,19 @@ async def migrate_instance(ns_id: str, data: MigrateNSData):
 
     return {"old_instance": old_instance, "new_instance": {"id": new_instance_id, "name": new_instance_name, "vim_account": data.future_vim_account}, "time_till_ready": time1, "time_till_done": time2}
 
-# get info about vim accounts
-@app.get("/grafana/vim_accounts")
-async def get_vim_accounts():
-    getToken()
+@app.get("/publisher/start")
+async def start_publisher():
+    global mqttclient
+    mqttclient.startPublishing()    
     
-    vim_accounts = {}
-    ns_instances = listNSInstances()
-    for instance_id in ns_instances:
-        info = yaml.safe_load(getNSInstanceInfo(instance_id))
-        for i in info["vld"][0]["vim_info"]:
-            vim_acc = i.replace("vim:", "")
-            
-            if vim_acc not in vim_accounts:
-                vim_accounts[vim_acc] = [ns_instances[instance_id]]
-            else:
-                vim_accounts[vim_acc].append(ns_instances[instance_id])
+    return {"message": "publisher started"}
 
-    deleteToken()
+@app.get("/publisher/stop")
+async def stop_publisher():
+    global mqttclient
+    mqttclient.stopPublishing()
 
-    return vim_accounts
-
-# get info about specific dt
-@app.get("/grafana/dt/{dt_id}")
-async def get_dt(dt_id: str):
-    getToken()
-
-    ns_instances = listNSInstances()
-
-    deleteToken()
-
-    return ns_instances[dt_id]
+    return {"message": "publisher stopped"}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

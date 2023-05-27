@@ -1,5 +1,6 @@
 import requests
 import random
+import threading
 import json
 import paho.mqtt.client as mqtt
 from datetime import datetime, timedelta
@@ -11,11 +12,13 @@ VIM_ACCOUNT_1 = "Jarvis"
 VIM_ACCOUNT_2 = "Jarvis2"
 
 
-class Listener():
+class MqttClient():
     def __init__(self) -> None:
         self.client = mqtt.Client()
         self.client.on_message = self.on_message
-        self.client.connect("es-broker.av.it.pt", 1883) # futuramente no localhost porque é p rodar na nossa maquina
+        # self.client.connect("es-broker.av.it.pt", 1883) # futuramente no localhost porque é p rodar na nossa maquina
+        self.client.connect("10.255.32.4", 1883) # futuramente no localhost porque é p rodar na nossa maquina
+
         self.topic = "its_center/inqueue/json/3306/CAM/#"
 
         self.session = requests.Session()
@@ -29,6 +32,9 @@ class Listener():
 
         self.last_topic = ""
         self.last_migrate = datetime.now()
+
+        self.publish_thread = None
+        self.publishing = False
 
 
     def on_message(self, client, userdata, msg):
@@ -60,7 +66,7 @@ class Listener():
             self.instance_id = data["new_instance"]["id"]
 
             print("Migration complete!")
-            print("Time Till Ready: " + str(data["time_till_ready"]))
+            print("Time \l Ready: " + str(data["time_till_ready"]))
             print("Time Till Done: " + str(data["time_till_done"]))
 
             self.client.subscribe(self.topic)
@@ -68,8 +74,7 @@ class Listener():
             print("Not migration time!")
             print("Time till next migration: " + str(self.last_migrate + timedelta(minutes=self.migration_cooldown) - datetime.now()))
 
-
-    def start(self):
+    def startListening(self):
         if self.instance_name != "":
             return 1
         
@@ -93,7 +98,7 @@ class Listener():
         self.client.loop_start()
         return 0
 
-    def stop(self):
+    def stopListening(self):
         if self.instance_name == "":
             return 1
         
@@ -112,5 +117,37 @@ class Listener():
     
     def countdown(self):
         return str(self.last_migrate + timedelta(minutes=self.migration_cooldown) - datetime.now())
-        
+    
+    def startPublishing(self):
+        self.publishing = True
+        self.publish_thread = threading.Thread(target=self.publish)
+        self.publish_thread.start()
 
+    def stopPublishing(self):
+        self.publishing = False
+        self.publish_thread.join()
+
+    def publish(self):
+        print("publishing")
+        while(self.publishing):
+            dts = self.get_dts()
+            for dt in dts:
+                self.client.publish("manager/" + dt, json.dumps(dts[dt]))
+
+            sleep(5)
+
+    def get_dts(self):
+        getToken()
+        
+        dts = {}
+        ns_instances = listNSInstances()
+        for instance_id in ns_instances:
+            data = getNSInstanceInfo(instance_id)
+            print(ns_instances[instance_id])
+            info = yaml.safe_load(data)
+            vim = list(info["vld"][0]["vim_info"].keys())[0].split(":")[1]
+
+            dts[ns_instances[instance_id]["name"]] = {"vim": vim, "id": instance_id, "nsd_name": ns_instances[instance_id]["nsd_name"], "state": ns_instances[instance_id]["state"]}
+
+        deleteToken()
+        return dts

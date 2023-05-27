@@ -68,6 +68,7 @@ def listVIMAccounts():
     url = BASE_URL + "admin/v1/vim_accounts"
     r = session.get(url)
 
+    print(r.text)
     vim_accounts = yaml.safe_load(r.text)
     vim_accounts = {a["name"]: a["_id"] for a in vim_accounts}
 
