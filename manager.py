@@ -1,18 +1,16 @@
 import yaml
 import uvicorn
-import threading
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from kubernetes import client, config
 from datetime import datetime
 
-from nbi_interactions import *
-from k8s_interactions import *
-from mqttclient import *
+from common.nbi_interactions import *
+from common.k8s_interactions import *
 
-CONFIG1 = "clusters/kubelet1.config"
-CONFIG2 = "clusters/kubelet2.config"
+CONFIG1 = "common/clusters/kubelet1.config"
+CONFIG2 = "common/clusters/kubelet2.config"
 
 VIM_ACCOUNT_1 = "Jarvis"
 VIM_ACCOUNT_2 = "Jarvis2"
@@ -20,46 +18,14 @@ VIM_ACCOUNT_2 = "Jarvis2"
 CLUSTER_NAMESPACE = "2a6f15e7-cef8-4037-9423-74516a7ccfa8"
 
 app = FastAPI()
-mqttclient = None
-publish_thread = None
-publish_flag = False
 
 migrations = {}
 
-@app.on_event("startup")
-def startup():
-    global mqttclient
-    mqttclient = MqttClient()
 
 # fodase
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
-
-# start tile listener
-@app.get("/listener/start")
-async def start_listerner(tasks: BackgroundTasks):
-    global mqttclient
-    tasks.add_task(mqttclient.startListening)
-    return {"message": "tile listener started"}
-
-# stop the listener
-@app.get("/listener/stop")
-async def stop_listener(tasks: BackgroundTasks):
-    global mqttclient
-    tasks.add_task(mqttclient.stopListening)
-    return {"message": "tile listener stopped"}
-    
-# get time till next migration
-@app.get("/listener/countdown")
-async def countdown():
-    global mqttclient
-    return {"countdown": mqttclient.countdown()}
-
-@app.get("/listener/topics")
-async def get_topics():
-    global mqttclient
-    return {"topics": mqttclient.topics}
 
 # list all ns instances
 @app.get("/osm/ns/")
@@ -143,44 +109,25 @@ async def migrate_instance(ns_id: str, data: MigrateNSData, tasks: BackgroundTas
         deleteToken(token)
         raise HTTPException(status_code=404, detail="VIM account not found")
 
+    new_instance_id = createNSInstance(vim_accounts[data.future_vim_account], old_instance["nsd_id"], ns_name)
     deleteToken(token)
-    tasks.add_task(migrate, ns_id, ns_name, data.future_vim_account)
-    return {"message": "migrating", "instance_id": ns_id, "instance_name": ns_name, "future_vim_account": data.future_vim_account}
+    tasks.add_task(migrate, ns_id, new_instance_id, ns_name, data.future_vim_account)
+    return {"message": "migrating", "old_instance_id": ns_id, "instance_name": ns_name, "future_vim_account": data.future_vim_account, "new_instance_id": new_instance_id}
 
-@app.get("/publisher/start")
-async def start_publisher():
-    global mqttclient
-    mqttclient.startPublishing()
-    
-    return {"message": "publisher started"}
-
-@app.get("/publisher/stop")
-async def stop_publisher():
-    global mqttclient
-    mqttclient.stopPublishing()
-
-    return {"message": "publisher stopped"}
-
-def migrate(ns_id, instance_name, future_vim_account):
+def migrate(ns_id, new_instance_id, instance_name, future_vim_account):
     token = getToken()
 
-    ns_instances = listNSInstances()
-    ns_name = instance_name
-
-    old_instance = ns_instances[ns_id]
     vim_accounts = listVIMAccounts()
 
     ts = datetime.now()
-    new_instance_name = ns_name
-    new_instance_id = createNSInstance(vim_accounts[future_vim_account], old_instance["nsd_id"], new_instance_name)
     waitForNSState(new_instance_id, "NOT_INSTANTIATED")
-    instantiateNSInstance(new_instance_id, vim_accounts[future_vim_account], new_instance_name)
+    instantiateNSInstance(new_instance_id, vim_accounts[future_vim_account], instance_name)
     waitForNSState(new_instance_id, "READY")
     
     if future_vim_account == VIM_ACCOUNT_1:
-        config.load_kube_config(config_file="clusters/kubelet1.config")
+        config.load_kube_config(config_file="common/clusters/kubelet1.config")
     elif future_vim_account == VIM_ACCOUNT_2:
-        config.load_kube_config(config_file="clusters/kubelet2.config")
+        config.load_kube_config(config_file="common/clusters/kubelet2.config")
 
     api = client.CoreV1Api()
     waitForPodReady(api, CLUSTER_NAMESPACE)
@@ -192,7 +139,6 @@ def migrate(ns_id, instance_name, future_vim_account):
     time2 = (datetime.now() - ts).total_seconds()
 
     deleteToken(token)
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

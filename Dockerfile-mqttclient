@@ -1,8 +1,10 @@
 FROM python:3.8
 WORKDIR /usr/src/app
-COPY ./manager .
+
+COPY ./mqttclient.py .
+COPY ./common/ ./common/
+
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-EXPOSE 8000
-CMD ["python3","main.py"]
+CMD ["python3","mqttclient.py"]

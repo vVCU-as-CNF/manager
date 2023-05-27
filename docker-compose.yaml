@@ -1,0 +1,16 @@
+version: '3.6'
+
+services:
+  manager:
+    build:
+      context: .
+      dockerfile: Dockerfile-manager
+    ports:
+      - 8000:8000
+
+  mqtt-client:
+    depends_on:
+      - manager
+    build:
+      context: .
+      dockerfile: Dockerfile-mqttclient

@@ -1,16 +1,14 @@
 import requests
 import random
-import threading
 import json
 import paho.mqtt.client as mqtt
 from datetime import datetime, timedelta
 
-from nbi_interactions import *
+from common.nbi_interactions import *
 
 BASE_URL = "http://localhost:8000/"
 VIM_ACCOUNT_1 = "Jarvis"
 VIM_ACCOUNT_2 = "Jarvis2"
-
 
 class MqttClient():
     def __init__(self) -> None:
@@ -33,12 +31,8 @@ class MqttClient():
         self.last_migrate = datetime.now()
         self.migration_cooldown = 5 # minutes
 
-
         self.publish_client = mqtt.Client()
         self.publish_client.connect("10.255.32.4", 1883)
-
-        self.publish_thread = None
-        self.publishing = False
 
     def on_message(self, client, userdata, msg):
         topic = msg.topic
@@ -75,7 +69,6 @@ class MqttClient():
             self.listen_client.unsubscribe(self.listen_topic)
 
             r = session.get(url=url, data=json.dumps(payload))
-            print(r.text)
             data = json.loads(r.text)
             # self.instance_id = data["new_instance"]["id"]
 
@@ -169,3 +162,9 @@ class MqttClient():
 
         deleteToken(token)
         return dts
+    
+if __name__ == "__main__":
+    print("fodase")
+    client = MqttClient()
+    client.startListening()
+    client.startPublishing()

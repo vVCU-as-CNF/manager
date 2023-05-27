@@ -70,7 +70,6 @@ def listVIMAccounts():
     url = BASE_URL + "admin/v1/vim_accounts"
     r = session.get(url)
 
-    print(r.text)
     vim_accounts = yaml.safe_load(r.text)
     vim_accounts = {a["name"]: a["_id"] for a in vim_accounts}
 
@@ -186,7 +185,6 @@ def listNSInstances(print_info=False):
     url = BASE_URL + "nslcm/v1/ns_instances"
     r = session.get(url)
 
-    print(r.text)
     ns_instances = yaml.safe_load(r.text)
     ns_instances = {a["_id"]: {"name": a["name"],
                                 "state": a["nsState"],
@@ -247,7 +245,6 @@ def instantiateNSInstance(instance_id, vim_acc_id, instance_name):
     r = session.post(url, data=payload)
 
     instance = yaml.safe_load(r.text)
-    print(r.text)
     instance_id = instance["id"]
 
     print("--------------------")
