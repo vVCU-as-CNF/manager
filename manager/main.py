@@ -58,6 +58,11 @@ async def countdown():
     global mqttclient
     return {"countdown": mqttclient.countdown()}
 
+@app.get("/listener/topics")
+async def get_topics():
+    global mqttclient
+    return {"topics": mqttclient.topics}
+
 # list all ns instances
 @app.get("/osm/ns/")
 async def list_instances():

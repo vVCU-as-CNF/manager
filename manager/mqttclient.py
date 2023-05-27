@@ -14,12 +14,11 @@ VIM_ACCOUNT_2 = "Jarvis2"
 
 class MqttClient():
     def __init__(self) -> None:
-        self.client = mqtt.Client()
-        self.client.on_message = self.on_message
-        # self.client.connect("es-broker.av.it.pt", 1883) # futuramente no localhost porque é p rodar na nossa maquina
-        self.client.connect("10.255.32.4", 1883) # futuramente no localhost porque é p rodar na nossa maquina
+        self.listen_client = mqtt.Client()
+        self.listen_client.on_message = self.on_message
+        self.listen_client.connect("es-broker.av.it.pt", 1883)
 
-        self.topic = "its_center/inqueue/json/3306/CAM/#"
+        self.listen_topic = "its_center/inqueue/json/3306/CAM/#"
 
         self.session = requests.Session()
         self.session.verify = False
@@ -28,26 +27,40 @@ class MqttClient():
         self.instance_id = ""
         self.current_vim_account = VIM_ACCOUNT_1 if random.randint(0,1) == 0 else VIM_ACCOUNT_2
 
+        self.topics = []
+        self.last_topic = ""
+
+        self.last_migrate = datetime.now()
         self.migration_cooldown = 5 # minutes
 
-        self.last_topic = ""
-        self.last_migrate = datetime.now()
+
+        self.publish_client = mqtt.Client()
+        self.publish_client.connect("10.255.32.4", 1883)
 
         self.publish_thread = None
         self.publishing = False
 
-
     def on_message(self, client, userdata, msg):
         topic = msg.topic
-        payload = msg.payload.decode("utf-8")
 
         if topic != self.last_topic:
             self.on_topic_change(topic)
 
     def on_topic_change(self, topic):
+        print(topic)
+        if topic not in self.topics:
+            self.topics.append(topic)
+
+        locationTrigger = False
+        lastData = self.last_topic.split("/")
+        data = topic.split("/")
+        if self.last_topic != "" and data[-7] != lastData[-7]:
+            locationTrigger = True
+        onCooldown = datetime.now() < self.last_migrate + timedelta(minutes=self.migration_cooldown)
+
         self.last_topic = topic
-        
-        if datetime.now() > self.last_migrate + timedelta(minutes=self.migration_cooldown):
+
+        if locationTrigger: # and not on cooldown
             print("Migration time!", topic[-8:-1])
             self.last_migrate = datetime.now()
 
@@ -59,7 +72,7 @@ class MqttClient():
                 "future_vim_account": self.current_vim_account
             }
 
-            self.client.unsubscribe(self.topic)
+            self.listen_client.unsubscribe(self.listen_topic)
 
             r = session.get(url=url, data=json.dumps(payload))
             data = json.loads(r.text)
@@ -69,13 +82,14 @@ class MqttClient():
             print("Time \l Ready: " + str(data["time_till_ready"]))
             print("Time Till Done: " + str(data["time_till_done"]))
 
-            self.client.subscribe(self.topic)
+            self.listen_client.subscribe(self.listen_topic)
         else:
             print("Not migration time!")
-            print("Time till next migration: " + str(self.last_migrate + timedelta(minutes=self.migration_cooldown) - datetime.now()))
+            print("Time till next migration: " + self.countdown())
 
     def startListening(self):
         if self.instance_name != "":
+            print(self.instance_name)
             return 1
         
         random_string = ''.join(random.choice('abcdefghijklmnopqrstuvwxyz') for _ in range(4))
@@ -94,15 +108,16 @@ class MqttClient():
         print("Instance created and instantiated. Listening...")
         self.last_migrate = datetime.now() - timedelta(minutes=4, seconds=40) # 1 min to start migrations
 
-        self.client.subscribe(self.topic)
-        self.client.loop_start()
+        self.listen_client.subscribe(self.listen_topic)
+        self.listen_client.loop_start()
         return 0
 
     def stopListening(self):
         if self.instance_name == "":
             return 1
         
-        self.client.loop_stop()
+        self.listen_client.unsubscribe(self.listen_topic)
+        self.listen_client.loop_stop()
         
         getToken()
         terminateNSInstance(self.instance_id)
@@ -116,7 +131,8 @@ class MqttClient():
         return 0
     
     def countdown(self):
-        return str(self.last_migrate + timedelta(minutes=self.migration_cooldown) - datetime.now())
+        onCooldown = datetime.now() < (self.last_migrate + timedelta(minutes=self.migration_cooldown))
+        return str(self.last_migrate + timedelta(minutes=self.migration_cooldown) - datetime.now()) if onCooldown else "00:00:00"
     
     def startPublishing(self):
         self.publishing = True
@@ -130,10 +146,7 @@ class MqttClient():
     def publish(self):
         print("publishing")
         while(self.publishing):
-            dts = self.get_dts()
-            for dt in dts:
-                self.client.publish("manager/" + dt, json.dumps(dts[dt]))
-
+            self.publish_client.publish("manager", json.dumps(self.get_dts()))
             sleep(5)
 
     def get_dts(self):
