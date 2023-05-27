@@ -61,7 +61,7 @@ class MqttClient():
         self.last_topic = topic
 
         if locationTrigger: # and not on cooldown
-            print("Migration time!", topic[-8:-1])
+            print("Migration time!")
             self.last_migrate = datetime.now()
 
             self.current_vim_account = VIM_ACCOUNT_1 if self.current_vim_account == VIM_ACCOUNT_2 else VIM_ACCOUNT_2
@@ -85,7 +85,7 @@ class MqttClient():
             self.listen_client.subscribe(self.listen_topic)
         else:
             print("Not migration time!")
-            print("Time till next migration: " + self.countdown())
+            # print("Time till next migration: " + self.countdown())
 
     def startListening(self):
         if self.instance_name != "":
