@@ -19,8 +19,9 @@ CLUSTER_NAMESPACE = "2a6f15e7-cef8-4037-9423-74516a7ccfa8"
 
 app = FastAPI()
 
-migrations = {}
-
+time1 = None
+time2 = None
+timestamp = None
 
 # fodase
 @app.get("/")
@@ -114,6 +115,11 @@ async def migrate_instance(ns_id: str, data: MigrateNSData, tasks: BackgroundTas
     tasks.add_task(migrate, ns_id, new_instance_id, ns_name, data.future_vim_account)
     return {"message": "migrating", "old_instance_id": ns_id, "instance_name": ns_name, "future_vim_account": data.future_vim_account, "new_instance_id": new_instance_id}
 
+@app.get("/osm/migration_times")
+def get_migration_times():
+    global time1, time2, timestamp
+    return {"time_till_ready": time1, "time_till_done": time2, "ts": timestamp}
+
 def migrate(ns_id, new_instance_id, instance_name, future_vim_account):
     token = getToken()
 
@@ -129,6 +135,8 @@ def migrate(ns_id, new_instance_id, instance_name, future_vim_account):
     elif future_vim_account == VIM_ACCOUNT_2:
         config.load_kube_config(config_file="common/clusters/kubelet2.config")
 
+    global time1, time2, timestamp
+
     api = client.CoreV1Api()
     waitForPodReady(api, CLUSTER_NAMESPACE)
     time1 = (datetime.now() - ts).total_seconds()
@@ -137,6 +145,8 @@ def migrate(ns_id, new_instance_id, instance_name, future_vim_account):
     waitForNSState(ns_id, "NOT_INSTANTIATED")
     deleteNSInstance(ns_id)
     time2 = (datetime.now() - ts).total_seconds()
+
+    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     deleteToken(token)
 

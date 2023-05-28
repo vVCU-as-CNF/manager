@@ -65,7 +65,7 @@ def allTokens():
 # VIM ACCOUNTS
 #
 
-def listVIMAccounts():
+def listVIMAccounts(print_info=False):
     """Lists all VIM accounts from OSM"""
     url = BASE_URL + "admin/v1/vim_accounts"
     r = session.get(url)
@@ -73,11 +73,12 @@ def listVIMAccounts():
     vim_accounts = yaml.safe_load(r.text)
     vim_accounts = {a["name"]: a["_id"] for a in vim_accounts}
 
-    print("--------------------")
-    print("All VIM Accounts: ")
-    for k in vim_accounts:
-        print("  " + k)
-        print("  id - " + vim_accounts[k])
+    if print_info:
+        print("--------------------")
+        print("All VIM Accounts: ")
+        for k in vim_accounts:
+            print("  " + k)
+            print("  id - " + vim_accounts[k])
 
     return vim_accounts
 
