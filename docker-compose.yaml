@@ -1,10 +1,15 @@
 version: '3.6'
 
+volumes:
+  migrations:
+
 services:
   manager:
     build:
       context: .
       dockerfile: Dockerfile-manager
+    volumes:
+      - ./volume:/usr/src/app/volume
     ports:
       - 8000:8000
 

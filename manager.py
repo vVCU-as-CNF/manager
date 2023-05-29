@@ -1,4 +1,3 @@
-import yaml
 import uvicorn
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -144,11 +143,13 @@ def migrate(ns_id, new_instance_id, instance_name, future_vim_account):
     terminateNSInstance(ns_id)
     waitForNSState(ns_id, "NOT_INSTANTIATED")
     deleteNSInstance(ns_id)
-    time2 = (datetime.now() - ts).total_seconds()
+    deleteToken(token)
 
+    time2 = (datetime.now() - ts).total_seconds()
     timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-    deleteToken(token)
+    with open("./volume/migrations.txt", "a") as f:
+        f.write(f"{timestamp} {time1} {time2}\n")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

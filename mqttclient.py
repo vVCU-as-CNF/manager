@@ -106,12 +106,12 @@ def get_dts():
         info = yaml.safe_load(data)
 
         if "vld" not in info or "vim_info" not in info["vld"][0] or len(info["vld"][0]["vim_info"]) == 0:
-            dts[ns_instances[instance_id]["name"]] = {"vim": "null", "id": instance_id, "nsd_name": ns_instances[instance_id]["nsd_name"], "state": ns_instances[instance_id]["state"], "future_vim_account": "null"}
+            dts[ns_instances[instance_id]["name"]] = {"name": ns_instances[instance_id]["name"], "vim": "null", "id": instance_id, "nsd_name": ns_instances[instance_id]["nsd_name"], "state": ns_instances[instance_id]["state"], "future_vim_account": "null"}
         else: 
             vim = info["vld"][0]["vim_info"]
             vim2 = list(vim.keys())[0]
             vim3 = vim2.split(":")[1]
-            dts[ns_instances[instance_id]["name"]] = {"vim": vim_accounts[vim3], "id": instance_id, "nsd_name": ns_instances[instance_id]["nsd_name"], "state": ns_instances[instance_id]["state"], "future_vim_account": "null"}
+            dts[ns_instances[instance_id]["name"]] = {"name": ns_instances[instance_id]["name"], "vim": vim_accounts[vim3], "id": instance_id, "nsd_name": ns_instances[instance_id]["nsd_name"], "state": ns_instances[instance_id]["state"], "future_vim_account": "null"}
 
     deleteToken(token)
     return dts
@@ -143,7 +143,18 @@ def get_vims():
                 vims[vim_accounts[vim]].append(ns_instances[instance]["name"])
 
     deleteToken(token)
-    return vims
+    new_vims = {vim: {} for vim in vims}
+    instances = [ns_instances[ns] for ns in ns_instances]
+
+    for vim in vims:
+        for instance in vims[vim]:
+            new_vims[vim][instance] = True
+    for instance in instances:
+        for vim in new_vims:
+            if instance["name"] not in new_vims[vim]:
+                new_vims[vim][instance["name"]] = False
+
+    return new_vims
         
 publish_client = mqtt.Client()
 publish_client.connect("10.255.32.4", 1883)
